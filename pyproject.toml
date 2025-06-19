@@ -1,0 +1,17 @@
+[project]
+name = "ucvl-downloader"
+version = "1.0.0"
+description = "Un script de Python para descargar archivos desde el servidor de visuales de la UCLV"
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "tqdm>=4.66.0",
+    "urllib3>=2.0.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pyinstaller>=6.14.1",
+    "pytest>=7.0.0",
+] 
