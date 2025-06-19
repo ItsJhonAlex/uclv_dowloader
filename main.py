@@ -40,7 +40,7 @@ Ejemplos:
     parser.add_argument(
         '--version',
         action='version',
-        version='UCLV Downloader v1.0.0'
+        version='UCLV Downloader v1.4.0'
     )
     
     args = parser.parse_args()

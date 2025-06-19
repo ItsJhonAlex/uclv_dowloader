@@ -12,8 +12,10 @@ from pathlib import Path
 
 def create_release_package():
     """Crea un paquete de release listo para distribuir"""
+    #TODO: Get version from pyproject.toml
+    #TODO: Add support for other platforms (Windows, MacOS)
     
-    version = "1.0.0"
+    version = "1.4.0"
     date = datetime.now().strftime("%Y%m%d")
     
     # Nombres de los paquetes

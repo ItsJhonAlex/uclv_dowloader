@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple, Dict, Any
 
 from core import UCLVDownloader, URLUtils, FileUtils
 from .components import (
@@ -16,6 +16,7 @@ from .components import (
     FileListComponent,
     DownloadControlsComponent,
     ProgressComponent,
+    SubtitleSearchComponent,
     ModernStyles
 )
 
@@ -86,7 +87,11 @@ class ModernGUIInterface:
         self.file_types = FileTypeComponent(self.scrollable_frame,
                                            on_selection_changed=self._on_file_type_changed)
         
-        self.file_list = FileListComponent(self.scrollable_frame)
+        self.file_list = FileListComponent(self.scrollable_frame,
+                                          on_selection_changed=self._on_file_selection_changed)
+        
+        self.subtitle_search = SubtitleSearchComponent(self.scrollable_frame,
+                                                      on_subtitles_selected=self._on_subtitles_selected)
         
         self.download_controls = DownloadControlsComponent(self.scrollable_frame,
                                                           on_download=self._on_download_started,
@@ -185,6 +190,9 @@ class ModernGUIInterface:
         # File list with fixed height to prevent excessive expansion
         self.file_list.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('md')))
         
+        # Subtitle search component (initially hidden)
+        # Will be shown conditionally when needed
+        
         self.download_controls.pack(fill=tk.X, 
                                    pady=(0, ModernStyles.get_spacing('md')))
         
@@ -251,6 +259,21 @@ class ModernGUIInterface:
             # Trigger re-analysis with new file types
             self._on_url_analysis(url)
     
+    def _on_file_selection_changed(self, selected_files):
+        """Handle individual file selection changes"""
+        # Update download button state based on selection
+        has_selection = len(selected_files) > 0
+        self.download_controls.enable_download(has_selection)
+        
+        # Check for videos without subtitles
+        self._check_for_videos_without_subtitles(selected_files)
+        
+        # Update status
+        if len(selected_files) == 0:
+            self.url_input.set_status("⚠️ Selecciona al menos un archivo para descargar", 'warning')
+        else:
+            self.url_input.set_status(f"✅ {len(selected_files)} archivos seleccionados para descarga", 'success')
+    
     def _on_download_started(self, download_path: str):
         """Handle download start"""
         if self.is_downloading:
@@ -261,9 +284,32 @@ class ModernGUIInterface:
             messagebox.showwarning("Sin archivos", "No hay archivos para descargar. Analiza una URL primero.")
             return
         
-        # Validate file type selection
-        if not self.file_types.has_selection():
-            messagebox.showwarning("Sin selección", "Selecciona al menos un tipo de archivo para descargar.")
+        # Validate individual file selection
+        selected_files = self.file_list.get_selected_files()
+        if not selected_files:
+            messagebox.showwarning("Sin selección", "Selecciona al menos un archivo para descargar.")
+            return
+        
+        # Show confirmation dialog with selection summary
+        file_count = len(selected_files)
+        type_counts = {}
+        for _, _, file_type in selected_files:
+            type_counts[file_type] = type_counts.get(file_type, 0) + 1
+        
+        type_summary = ", ".join([f"{count} {file_type}{'s' if count > 1 else ''}" 
+                                 for file_type, count in type_counts.items()])
+        
+        confirm_msg = f"¿Descargar {file_count} archivo{'s' if file_count > 1 else ''}?\n\n{type_summary}\n\nCarpeta: {download_path}"
+        
+        if not messagebox.askyesno("Confirmar descarga", confirm_msg):
+            return
+        
+        # Check if we need external subtitles before starting download
+        videos_without_subtitles = self._get_videos_without_subtitles(selected_files)
+        
+        if videos_without_subtitles:
+            # Show subtitle search component instead of starting download immediately
+            self.subtitle_search.show_for_videos(videos_without_subtitles)
             return
         
         # Start download in background thread
@@ -272,31 +318,120 @@ class ModernGUIInterface:
         
         self.download_thread = threading.Thread(
             target=self._download_worker,
-            args=(download_path,),
+            args=(download_path, selected_files, {}),  # Empty external subtitles
             daemon=True
         )
         self.download_thread.start()
     
-    def _download_worker(self, download_path: str):
-        """Background download worker"""
+    def _check_for_videos_without_subtitles(self, selected_files: List[Tuple[str, str, str]]):
+        """Check if there are videos without corresponding subtitles"""
+        videos_without_subtitles = self._get_videos_without_subtitles(selected_files)
+        
+        if videos_without_subtitles:
+            # Show a subtle hint that external subtitles can be searched
+            video_count = len(videos_without_subtitles)
+            self.url_input.set_status(
+                f"💡 {video_count} video{'s' if video_count > 1 else ''} sin subtítulos - puedes buscar subtítulos externos al descargar", 
+                'normal'
+            )
+        else:
+            # Hide subtitle search component if no videos need subtitles
+            self.subtitle_search.hide()
+    
+    def _get_videos_without_subtitles(self, selected_files: List[Tuple[str, str, str]]) -> List[Tuple[str, str, str]]:
+        """Get list of videos that don't have corresponding subtitle files"""
+        from pathlib import Path
+        
+        videos = [f for f in selected_files if f[2] == 'video']
+        subtitles = [f for f in selected_files if f[2] == 'subtitle']
+        
+        # Create a set of video names (without extension) that have subtitles
+        subtitle_names = set()
+        for subtitle_file, _, _ in subtitles:
+            subtitle_stem = Path(subtitle_file).stem
+            # Remove common subtitle suffixes like .es, .spa, .spanish
+            subtitle_stem = subtitle_stem.replace('.es', '').replace('.spa', '').replace('.spanish', '')
+            subtitle_names.add(subtitle_stem.lower())
+        
+        # Find videos without matching subtitles
+        videos_without_subtitles = []
+        for video_file, video_url, video_type in videos:
+            video_stem = Path(video_file).stem.lower()
+            if video_stem not in subtitle_names:
+                videos_without_subtitles.append((video_file, video_url, video_type))
+        
+        return videos_without_subtitles
+    
+    def _on_subtitles_selected(self, selected_subtitles: Dict[str, Dict[str, Any]]):
+        """Handle subtitle selection from the search component"""
+        # Get current download configuration
+        download_path = self.download_controls.get_download_path()
+        selected_files = self.file_list.get_selected_files()
+        
+        if not selected_files:
+            messagebox.showwarning("Sin archivos", "No hay archivos seleccionados para descargar.")
+            return
+        
+        # Start download with external subtitles
+        self.is_downloading = True
+        self._update_ui_for_download_state(True)
+        
+        self.download_thread = threading.Thread(
+            target=self._download_worker,
+            args=(download_path, selected_files, selected_subtitles),
+            daemon=True
+        )
+        self.download_thread.start()
+    
+    def _download_worker(self, download_path: str, selected_files: List[Tuple[str, str, str]], 
+                        external_subtitles: Dict[str, Dict[str, Any]]):
+        """Background download worker with external subtitle support"""
         try:
-            # Setup progress callback
+            # Track progress across files
+            self._current_file_index = 0
+            total_items = len(selected_files) + len(external_subtitles)
+            self._total_files = total_items
+            self._completed_files = 0
+            
             def progress_callback(downloaded, total, filename):
-                # Update UI in main thread
-                progress_percent = (downloaded / total * 100) if total > 0 else 0
+                # Calculate file progress percentage
+                file_progress = (downloaded / total * 100) if total > 0 else 0
                 
-                self.root.after(0, lambda: self.progress.set_progress(progress_percent))
+                # Update UI in main thread
+                self.root.after(0, lambda: self.progress.set_progress(file_progress))
                 self.root.after(0, lambda: self.progress.set_current_file(filename))
                 self.root.after(0, lambda: self.progress.update_stats(
-                    downloaded=downloaded, 
-                    total=total
+                    downloaded=self._completed_files, 
+                    total=self._total_files
                 ))
                 self.root.after(0, lambda: self.progress.set_status(
-                    f"Descargando... ({downloaded}/{total})", 'downloading'))
+                    f"Descargando archivo {self._completed_files + 1} de {self._total_files}: {filename}", 'downloading'))
             
-            # Start download
+            # Start download with selected files
             url = self.url_input.get_url()
-            result = self.downloader.download_files(url, download_path, progress_callback)
+            result = self.downloader.download_selected_files(selected_files, url, download_path, progress_callback)
+            
+            # Download external subtitles if any were selected
+            if external_subtitles:
+                self.root.after(0, lambda: self.progress.set_status("Descargando subtítulos externos...", 'downloading'))
+                
+                from core.subtitle_search import SubtitleSearchManager
+                search_manager = SubtitleSearchManager()
+                
+                subtitle_results = search_manager.download_selected_subtitles(
+                    external_subtitles, Path(download_path)
+                )
+                
+                # Add subtitle results to main result
+                if not result:
+                    result = {'completed': 0, 'failed': [], 'total': 0}
+                
+                subtitle_success = sum(1 for success in subtitle_results.values() if success)
+                subtitle_failed = [f"Subtitle for {video}" for video, success in subtitle_results.items() if not success]
+                
+                result['completed'] += subtitle_success
+                result['failed'].extend(subtitle_failed)
+                result['total'] += len(external_subtitles)
             
             # Handle completion in main thread
             self.root.after(0, lambda: self._download_completed(result))
@@ -311,17 +446,24 @@ class ModernGUIInterface:
         self._update_ui_for_download_state(False)
         
         # Update progress
-        self.progress.animate_success()
+        if result.get('success', False):
+            self.progress.animate_success()
         
         # Show completion message
-        downloaded = result.get('downloaded', 0)
-        failed = result.get('failed', 0)
+        completed = result.get('completed', 0)
+        failed_list = result.get('failed', [])
+        failed_count = len(failed_list)
+        total = result.get('total', 0)
         
-        if failed == 0:
-            message = f"🎉 ¡Descarga completada!\n\nArchivos descargados: {downloaded}"
+        if failed_count == 0:
+            message = f"🎉 ¡Descarga completada exitosamente!\n\n✅ Archivos descargados: {completed}\n📂 Ubicación: {result.get('download_path', 'Desconocida')}"
             messagebox.showinfo("Descarga completada", message)
         else:
-            message = f"⚠️ Descarga completada con errores\n\nDescargados: {downloaded}\nFallidos: {failed}"
+            failed_names = "\n".join([f"• {f}" for f in failed_list[:5]])  # Show first 5 failed files
+            if len(failed_list) > 5:
+                failed_names += f"\n... y {len(failed_list) - 5} más"
+            
+            message = f"⚠️ Descarga completada con errores\n\n✅ Descargados: {completed}\n❌ Fallidos: {failed_count}\n📂 Ubicación: {result.get('download_path', 'Desconocida')}\n\nArchivos que fallaron:\n{failed_names}"
             messagebox.showwarning("Descarga con errores", message)
     
     def _download_error(self, error_msg: str):

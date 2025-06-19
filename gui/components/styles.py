@@ -110,6 +110,7 @@ class ModernStyles:
         cls._configure_treeview_styles(style)
         cls._configure_progressbar_styles(style)
         cls._configure_checkbutton_styles(style)
+        cls._configure_radiobutton_styles(style)
         
         return style
     
@@ -300,6 +301,18 @@ class ModernStyles:
                        focuscolor='none')
         
         style.map('Modern.TCheckbutton',
+                 background=[('active', cls.COLORS['bg_hover'])])
+    
+    @classmethod
+    def _configure_radiobutton_styles(cls, style: ttk.Style):
+        """Configure radiobutton styles"""
+        style.configure('Modern.TRadiobutton',
+                       background=cls.COLORS['bg_primary'],
+                       foreground=cls.COLORS['text_primary'],
+                       font=cls.FONTS['body'],
+                       focuscolor='none')
+        
+        style.map('Modern.TRadiobutton',
                  background=[('active', cls.COLORS['bg_hover'])])
     
     @classmethod

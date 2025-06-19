@@ -17,6 +17,7 @@ from .file_types import FileTypeComponent
 from .file_list import FileListComponent
 from .download_controls import DownloadControlsComponent
 from .progress import ProgressComponent
+from .subtitle_search import SubtitleSearchComponent
 from .styles import ModernStyles
 
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     'FileListComponent',
     'DownloadControlsComponent',
     'ProgressComponent',
+    'SubtitleSearchComponent',
     'ModernStyles'
 ] 

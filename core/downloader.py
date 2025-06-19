@@ -199,29 +199,56 @@ class UCLVDownloader:
         if not files:
             return {'success': False, 'message': 'No files found to download'}
         
+        return self.download_selected_files(files, url, download_path, progress_callback)
+    
+    def download_selected_files(self, selected_files: List[Tuple[str, str, str]], 
+                               url: str, download_path: Optional[Path] = None,
+                               progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """
+        Download specific selected files
+        Args:
+            selected_files: List of (filename, file_url, file_type) tuples to download
+            url: Original URL for folder name extraction
+            download_path: Target download directory
+            progress_callback: Progress callback function
+        Returns: Dictionary with download statistics
+        """
+        if not selected_files:
+            return {'success': False, 'message': 'No files selected for download'}
+        
+        # Setup progress tracking
+        self.progress.start_time = time.time()
+        
         # Create download directory
         if download_path is None:
             folder_name = URLUtils.extract_folder_name(url)
             download_path = Path("descarga") / folder_name
+        elif isinstance(download_path, str):
+            download_path = Path(download_path)
         
         download_path.mkdir(parents=True, exist_ok=True)
         
         # Update progress
-        self.progress.update(total_files=len(files))
+        self.progress.update(total_files=len(selected_files))
         
         # Group files by type for better organization
-        file_stats = self._get_file_statistics(files)
+        file_stats = self._get_file_statistics(selected_files)
         
         # Download files
         successful_downloads = 0
         failed_downloads = []
         
         try:
-            for i, (filename, file_url, file_type) in enumerate(files):
+            for i, (filename, file_url, file_type) in enumerate(selected_files):
                 self.progress.update(current_file=filename, current_progress=i)
                 
+                # Enhanced progress callback for this specific file
+                def file_progress_callback(downloaded, total, fname):
+                    if progress_callback:
+                        progress_callback(downloaded, total, fname)
+                
                 try:
-                    if self.download_file(filename, file_url, download_path, progress_callback):
+                    if self.download_file(filename, file_url, download_path, file_progress_callback):
                         successful_downloads += 1
                         self.progress.update(completed_files=successful_downloads)
                     else:
@@ -233,7 +260,7 @@ class UCLVDownloader:
                     self.progress.update(failed_files=len(failed_downloads))
                 
                 # Delay between downloads
-                if i < len(files) - 1:
+                if i < len(selected_files) - 1:
                     time.sleep(self.download_delay)
                     
         except KeyboardInterrupt:
@@ -242,7 +269,7 @@ class UCLVDownloader:
                 'message': 'Download interrupted by user',
                 'completed': successful_downloads,
                 'failed': failed_downloads,
-                'total': len(files)
+                'total': len(selected_files)
             }
         
         # Return statistics
@@ -251,7 +278,7 @@ class UCLVDownloader:
             'message': 'Download completed successfully' if len(failed_downloads) == 0 else 'Download completed with errors',
             'completed': successful_downloads,
             'failed': failed_downloads,
-            'total': len(files),
+            'total': len(selected_files),
             'download_path': str(download_path.absolute()),
             'file_stats': file_stats,
             'duration': time.time() - self.progress.start_time
