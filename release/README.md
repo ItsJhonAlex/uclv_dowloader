@@ -1,6 +1,6 @@
 # 🏗️ Release Tools
 
-Esta carpeta contiene todas las herramientas necesarias para compilar y crear releases del UCVL Downloader.
+Esta carpeta contiene todas las herramientas necesarias para compilar y crear releases del UCLV Downloader.
 
 ## 📁 Archivos
 

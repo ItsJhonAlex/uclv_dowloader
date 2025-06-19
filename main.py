@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-UCVL Downloader - Main launcher
+UCLV Downloader - Main launcher
 Allows choosing between CLI and GUI interfaces
 """
 
@@ -14,7 +14,7 @@ def main():
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description="🎬 UCVL Downloader - Descargador de Videos y Subtítulos",
+        description="🎬 UCLV Downloader - Descargador de Videos y Subtítulos",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos:
@@ -40,7 +40,7 @@ Ejemplos:
     parser.add_argument(
         '--version',
         action='version',
-        version='UCVL Downloader v1.0.0'
+        version='UCLV Downloader v1.0.0'
     )
     
     args = parser.parse_args()
@@ -97,7 +97,7 @@ def show_banner():
     """Show application banner"""
     banner = """
 ╔══════════════════════════════════════════════════════════╗
-║                🎬 UCVL Downloader v1.0                  ║
+║                🎬 UCLV Downloader v1.0                  ║
 ║          Descargador de Videos y Subtítulos              ║
 ║                                                          ║
 ║  Un descargador modular para visuales.ucv.cu            ║

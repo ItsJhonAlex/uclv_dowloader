@@ -10,20 +10,106 @@ y este proyecto se adhiere al [Semantic Versioning](https://semver.org/spec/v2.0
 ### Por agregar
 - Descargas paralelas para múltiples archivos simultáneos
 - Funcionalidad de reanudar descargas interrumpidas
-- Temas para la GUI (modo oscuro/claro)
+- Temas para la GUI (modo oscuro/claro personalizable)
 - Sistema de notificaciones de finalización
 - Cola de descargas para múltiples URLs
 - Organización inteligente por serie/temporada
-- Configuración persistente de preferencias del usuario
 - Sistema de plugins para nuevos sitios
 - Modo de descarga programada
 - Integración con gestores de descarga externos
+
+## [1.1.0] - 2025-01-23
+
+### 🎨 Renovación Completa de la GUI - Arquitectura Modular
+
+Esta versión presenta una **renovación completa** de la interfaz gráfica con arquitectura modular moderna que mejora significativamente la experiencia del usuario, mantenibilidad y escalabilidad.
+
+### ✨ Agregado
+
+#### 🏗️ Sistema de Componentes Modulares
+- **HeaderComponent** - Encabezado profesional con branding y versión
+- **URLInputComponent** - Entrada inteligente con validación en tiempo real y ejemplos
+- **FileTypeComponent** - Selector avanzado con acciones rápidas y información de extensiones
+- **FileListComponent** - TreeView moderno con iconos, estadísticas y filtros
+- **DownloadControlsComponent** - Controles avanzados con validación de rutas
+- **ProgressComponent** - Progreso detallado con estadísticas en tiempo real
+- **ModernStyles** - Sistema de estilos centralizado con 22 colores, 7 fuentes, 7 espaciados
+
+#### 🎨 Mejoras de Diseño Visual
+- **Paleta de colores moderna** con azules y grises profesionales
+- **Tipografía jerárquica** con Segoe UI y fuentes optimizadas
+- **Iconografía emoji** consistente para mejor UX
+- **Espaciado sistemático** para layout profesional
+- **Estados visuales** claros para todas las operaciones
+
+#### ✨ Funcionalidades UX Avanzadas
+- **Validación en tiempo real** de URLs con feedback inmediato
+- **Ejemplos desplegables** para guiar al usuario
+- **Acciones rápidas** (Seleccionar todo, Solo videos, Videos+Subtítulos)
+- **Información contextual** de archivos y directorios
+- **Atajos de teclado** para power users:
+  - `Ctrl+O` - Enfocar campo URL
+  - `Ctrl+D` - Iniciar descarga
+  - `F5` - Actualizar lista
+  - `Esc` - Cancelar descarga
+
+#### 🚀 Arquitectura Técnica Mejorada
+- **Separación de responsabilidades** - cada componente <200 líneas
+- **Modularidad** - componentes independientes y reutilizables
+- **Backward compatibility** - alias GUIInterface → ModernGUIInterface
+- **Threading optimizado** para operaciones no bloqueantes
+- **Sistema de eventos** bien estructurado con callbacks
+
+#### 🔧 Funcionalidades Técnicas
+- **Validación inteligente** de rutas con creación automática
+- **Gestión de estados** avanzada para operaciones de descarga
+- **Información en tiempo real** de carpetas y archivos
+- **Manejo robusto** de errores por componente
+- **Sistema extensible** para futuros componentes
+
+### 🔄 Cambiado
+- **Interfaz GUI completamente renovada** con arquitectura modular
+- **Estructura de archivos reorganizada** en gui/components/
+- **Sistema de estilos centralizado** reemplaza estilos dispersos
+- **Experiencia de usuario** significativamente mejorada
+- **Inicialización más rápida** con componentes ligeros
+
+### 🏗️ Arquitectura Técnica
+
+#### Estructura Modular
+```
+gui/
+├── components/              # Componentes modulares (6 componentes)
+│   ├── styles.py           # Sistema de estilos centralizado
+│   ├── header.py           # Encabezado con branding
+│   ├── url_input.py        # Entrada inteligente de URL
+│   ├── file_types.py       # Selector de tipos de archivo
+│   ├── file_list.py        # Lista moderna de archivos
+│   ├── download_controls.py # Controles de descarga
+│   └── progress.py         # Progreso y estadísticas
+├── interface.py            # ModernGUIInterface principal
+└── README.md              # Documentación técnica
+```
+
+#### Características de Desarrollo
+- **Máximo 200 líneas** por archivo para mantenibilidad
+- **Alta cohesión** - cada componente una responsabilidad
+- **Bajo acoplamiento** - componentes independientes
+- **Testing individual** - cada componente probable por separado
+- **Documentación completa** con ejemplos de extensión
+
+### 📊 Métricas de Mejora
+- **Modularidad**: 6 componentes especializados vs monolítico
+- **Mantenibilidad**: Archivos <200 líneas vs >300 líneas
+- **UX**: Validación en tiempo real vs validación al submit
+- **Extensibilidad**: Sistema de componentes vs código acoplado
+- **Styling**: Sistema centralizado vs estilos dispersos
 
 ## [1.0.0] - 2025-06-19
 
 ### 🎉 Lanzamiento inicial
 
-Esta es la primera versión estable del UCVL Downloader con arquitectura modular completa.
+Esta es la primera versión estable del UCLV Downloader con arquitectura modular completa.
 
 ### ✨ Agregado
 
@@ -55,7 +141,7 @@ Esta es la primera versión estable del UCVL Downloader con arquitectura modular
 
 #### Arquitectura Modular
 - **Módulo Core** (`core/`):
-  - `UCVLDownloader`: Clase principal con filtros configurables
+  - `UCLVDownloader`: Clase principal con filtros configurables
   - `FileUtils`: Utilidades para detección de tipos y formateo
   - `URLUtils`: Manipulación y validación de URLs
 - **Módulo CLI** (`cli/interface.py`): Interfaz de línea de comandos completa

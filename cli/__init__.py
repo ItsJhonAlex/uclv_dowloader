@@ -1,5 +1,5 @@
 """
-CLI module for UCVL Downloader
+CLI module for UCLV Downloader
 Contains command line interface
 """
 

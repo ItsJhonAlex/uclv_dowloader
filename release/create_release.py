@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script para crear un release distributable de UCVL Downloader
+Script para crear un release distributable de UCLV Downloader
 """
 
 import os
@@ -55,7 +55,7 @@ def create_release_package():
             print(f"⚠️  No encontrado: {src}")
     
     # Crear archivo de información de release
-    release_info = f"""# UCVL Downloader v{version} - Release Linux x64
+    release_info = f"""# UCLV Downloader v{version} - Release Linux x64
 
 🎬 **Descargador de Videos y Subtítulos para visuales.ucv.cu**
 
@@ -147,7 +147,7 @@ sudo apt install libc6 libgcc-s1
 - ✅ Arquitectura modular
 - ✅ Sin dependencias externas
 
-¡Gracias por usar UCVL Downloader! 🎉
+¡Gracias por usar UCLV Downloader! 🎉
 """
     
     with open(release_dir / "RELEASE-INFO.md", 'w') as f:
@@ -188,7 +188,7 @@ sudo apt install libc6 libgcc-s1
 
 def main():
     """Función principal"""
-    print("📦 UCVL Downloader - Creador de Release")
+    print("📦 UCLV Downloader - Creador de Release")
     print("=" * 45)
     
     # Cambiar al directorio raíz del proyecto

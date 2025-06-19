@@ -1,4 +1,4 @@
-# UCVL Downloader 🎬
+# UCLV Downloader 🎬
 
 Un downloader moderno y eficiente para descargar videos y subtítulos desde el sitio `visuales.ucv.cu`. Construido con Python y UV, ofrece tanto interfaz de línea de comandos (CLI) como interfaz gráfica (GUI).
 
@@ -115,7 +115,7 @@ ucvl_dowloader/
 
 ### Core Module (`core/`)
 
-- **UCVLDownloader**: Clase principal con filtros configurables
+- **UCLVDownloader**: Clase principal con filtros configurables
 - **Reintentos**: Lógica de reintento para descargas fallidas
 - **Callbacks**: Sistema de callbacks para actualización de progreso
 - **Estadísticas**: Tracking detallado de descargas y errores

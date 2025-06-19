@@ -1,343 +1,417 @@
 """
-GUI Interface for UCVL Downloader using Tkinter
+Modern Modular GUI Interface for UCLV Downloader using Components
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, scrolledtext
+from tkinter import ttk, messagebox
 import threading
 from pathlib import Path
 from typing import Optional
 
-from core import UCVLDownloader, URLUtils, FileUtils
+from core import UCLVDownloader, URLUtils, FileUtils
+from .components import (
+    HeaderComponent,
+    URLInputComponent, 
+    FileTypeComponent,
+    FileListComponent,
+    DownloadControlsComponent,
+    ProgressComponent,
+    ModernStyles
+)
 
 
-class GUIInterface:
-    """Graphical User Interface for UCVL Downloader"""
+class ModernGUIInterface:
+    """Modern modular GUI interface for UCLV Downloader"""
     
     def __init__(self):
-        self.downloader = UCVLDownloader()
+        # Core components
+        self.downloader = UCLVDownloader()
         self.download_thread: Optional[threading.Thread] = None
         self.is_downloading = False
         
         # Create main window
-        self.root = tk.Tk()
-        self.root.title("🎬 UCVL Downloader")
-        self.root.geometry("800x600")
-        self.root.resizable(True, True)
+        self.root = self._create_main_window()
         
-        # Style
-        self.style = ttk.Style()
-        self.style.theme_use('clam')
+        # Setup modern theme
+        self.style = ModernStyles.setup_theme(self.root)
         
-        self.setup_ui()
+        # Initialize components
+        self._setup_components()
         
-    def setup_ui(self):
-        """Setup the user interface"""
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Layout components
+        self._setup_layout()
         
-        # Configure grid weights
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
+        # Setup event bindings
+        self._setup_bindings()
+    
+    def _create_main_window(self) -> tk.Tk:
+        """Create and configure the main window"""
+        root = tk.Tk()
+        root.title("🎬 UCLV Downloader")
+        root.geometry("950x800")  # Aumentado para mejor visualización
+        root.minsize(800, 600)
+        root.resizable(True, True)
         
-        # Title
-        title_label = ttk.Label(main_frame, text="🎬 UCVL Downloader", 
-                               font=('Arial', 16, 'bold'))
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        # Set window icon (if available)
+        # root.iconbitmap("icon.ico")  # Uncomment if you have an icon
         
-        # URL input section
-        ttk.Label(main_frame, text="📎 URL de la carpeta:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        # Configure main window background
+        root.configure(bg=ModernStyles.get_color('bg_primary'))
         
-        self.url_var = tk.StringVar()
-        self.url_entry = ttk.Entry(main_frame, textvariable=self.url_var, width=60)
-        self.url_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5, padx=(10, 5))
+        # Center window on screen
+        self._center_window(root)
         
-        self.analyze_btn = ttk.Button(main_frame, text="🔍 Analizar", command=self.analyze_url)
-        self.analyze_btn.grid(row=1, column=2, pady=5)
+        return root
+    
+    def _center_window(self, window):
+        """Center window on screen"""
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
+        window.geometry(f"{width}x{height}+{x}+{y}")
+    
+    def _setup_components(self):
+        """Initialize all GUI components with scrollable container"""
+        # Create main scrollable frame
+        self._create_scrollable_container()
         
-        # File type selection
-        file_types_frame = ttk.LabelFrame(main_frame, text="🔧 Tipos de archivo a descargar", padding="10")
-        file_types_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
-        file_types_frame.columnconfigure(1, weight=1)
+        # Create components inside scrollable area
+        self.header = HeaderComponent(self.scrollable_frame)
         
-        self.videos_var = tk.BooleanVar(value=True)
-        self.subtitles_var = tk.BooleanVar(value=True)
-        self.images_var = tk.BooleanVar(value=False)
-        self.info_var = tk.BooleanVar(value=False)
+        self.url_input = URLInputComponent(self.scrollable_frame, 
+                                          on_analysis_complete=self._on_url_analysis)
         
-        ttk.Checkbutton(file_types_frame, text="📹 Videos", variable=self.videos_var).grid(row=0, column=0, sticky=tk.W)
-        ttk.Checkbutton(file_types_frame, text="📝 Subtítulos", variable=self.subtitles_var).grid(row=0, column=1, sticky=tk.W)
-        ttk.Checkbutton(file_types_frame, text="🖼️ Imágenes", variable=self.images_var).grid(row=0, column=2, sticky=tk.W)
-        ttk.Checkbutton(file_types_frame, text="📄 Info", variable=self.info_var).grid(row=0, column=3, sticky=tk.W)
+        self.file_types = FileTypeComponent(self.scrollable_frame,
+                                           on_selection_changed=self._on_file_type_changed)
         
-        # Files preview
-        preview_frame = ttk.LabelFrame(main_frame, text="📋 Archivos encontrados", padding="10")
-        preview_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
-        preview_frame.columnconfigure(0, weight=1)
-        preview_frame.rowconfigure(0, weight=1)
+        self.file_list = FileListComponent(self.scrollable_frame)
         
-        # Treeview for file list
-        columns = ('Nombre', 'Tipo', 'Tamaño')
-        self.files_tree = ttk.Treeview(preview_frame, columns=columns, show='headings', height=8)
+        self.download_controls = DownloadControlsComponent(self.scrollable_frame,
+                                                          on_download=self._on_download_started,
+                                                          on_cancel=self._on_download_cancelled)
         
-        # Configure columns
-        self.files_tree.heading('Nombre', text='📄 Nombre del archivo')
-        self.files_tree.heading('Tipo', text='🏷️ Tipo')
-        self.files_tree.heading('Tamaño', text='📏 Tamaño')
+        self.progress = ProgressComponent(self.scrollable_frame)
+    
+    def _create_scrollable_container(self):
+        """Create a scrollable container for all components"""
+        # Main container frame (fills the window)
+        self.main_container = ttk.Frame(self.root)
+        self.main_container.pack(fill=tk.BOTH, expand=True, 
+                                padx=ModernStyles.get_spacing('md'),
+                                pady=ModernStyles.get_spacing('md'))
         
-        self.files_tree.column('Nombre', width=400)
-        self.files_tree.column('Tipo', width=100)
-        self.files_tree.column('Tamaño', width=100)
+        # Create canvas and scrollbar
+        self.canvas = tk.Canvas(self.main_container, 
+                               bg=ModernStyles.get_color('bg_primary'),
+                               highlightthickness=0)
         
-        # Scrollbar for treeview
-        tree_scrollbar = ttk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=self.files_tree.yview)
-        self.files_tree.configure(yscrollcommand=tree_scrollbar.set)
+        self.v_scrollbar = ttk.Scrollbar(self.main_container, 
+                                        orient=tk.VERTICAL, 
+                                        command=self.canvas.yview)
         
-        self.files_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        tree_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        # Configure scrollbar
+        self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
         
-        # Download path selection
-        path_frame = ttk.Frame(main_frame)
-        path_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
-        path_frame.columnconfigure(1, weight=1)
+        # Create scrollable frame inside canvas
+        self.scrollable_frame = ttk.Frame(self.canvas)
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
         
-        ttk.Label(path_frame, text="📁 Carpeta de descarga:").grid(row=0, column=0, sticky=tk.W)
+        # Add scrollable frame to canvas
+        self.canvas_frame = self.canvas.create_window(
+            (0, 0), 
+            window=self.scrollable_frame, 
+            anchor="nw"
+        )
         
-        self.download_path_var = tk.StringVar(value="./descarga")
-        self.path_entry = ttk.Entry(path_frame, textvariable=self.download_path_var, width=50)
-        self.path_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 5))
+        # Pack canvas and scrollbar
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        ttk.Button(path_frame, text="📂", command=self.select_download_path).grid(row=0, column=2)
+        # Bind mouse wheel to canvas
+        self._bind_mousewheel()
         
-        # Progress section
-        progress_frame = ttk.LabelFrame(main_frame, text="📊 Progreso", padding="10")
-        progress_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
-        progress_frame.columnconfigure(0, weight=1)
+        # Bind canvas resize to update scroll region
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+    
+    def _bind_mousewheel(self):
+        """Bind mouse wheel events for scrolling"""
+        def _on_mousewheel(event):
+            if self.canvas.winfo_exists():
+                self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
-        self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
-        self.progress_bar.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+        def _bind_to_mousewheel(event):
+            if self.canvas.winfo_exists():
+                self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
-        self.status_var = tk.StringVar(value="Listo para descargar")
-        self.status_label = ttk.Label(progress_frame, textvariable=self.status_var)
-        self.status_label.grid(row=1, column=0, sticky=tk.W)
+        def _unbind_from_mousewheel(event):
+            if self.canvas.winfo_exists():
+                self.canvas.unbind_all("<MouseWheel>")
         
-        # Control buttons
-        buttons_frame = ttk.Frame(main_frame)
-        buttons_frame.grid(row=6, column=0, columnspan=3, pady=20)
+        # Bind mouse wheel when entering the canvas
+        self.canvas.bind('<Enter>', _bind_to_mousewheel)
+        self.canvas.bind('<Leave>', _unbind_from_mousewheel)
         
-        self.download_btn = ttk.Button(buttons_frame, text="⬇️ Descargar", 
-                                     command=self.start_download, state=tk.DISABLED)
-        self.download_btn.pack(side=tk.LEFT, padx=5)
+        # For Linux systems (additional binding)
+        def _on_mousewheel_linux(event):
+            if self.canvas.winfo_exists():
+                if event.num == 4:
+                    self.canvas.yview_scroll(-1, "units")
+                elif event.num == 5:
+                    self.canvas.yview_scroll(1, "units")
         
-        self.cancel_btn = ttk.Button(buttons_frame, text="❌ Cancelar", 
-                                   command=self.cancel_download, state=tk.DISABLED)
-        self.cancel_btn.pack(side=tk.LEFT, padx=5)
+        self.canvas.bind("<Button-4>", _on_mousewheel_linux)
+        self.canvas.bind("<Button-5>", _on_mousewheel_linux)
+    
+    def _on_canvas_configure(self, event):
+        """Handle canvas resize to update scrollable frame width"""
+        # Update the scrollable frame width to match canvas width
+        canvas_width = event.width
+        self.canvas.itemconfig(self.canvas_frame, width=canvas_width)
+    
+    def _setup_layout(self):
+        """Setup component layout in scrollable container"""
+        # All components now use pack with proper spacing
+        self.header.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('lg')))
         
-        ttk.Button(buttons_frame, text="ℹ️ Acerca de", command=self.show_about).pack(side=tk.LEFT, padx=5)
+        self.url_input.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('md')))
         
-        # Configure grid weights for resizing
-        main_frame.rowconfigure(3, weight=1)
+        self.file_types.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('md')))
         
-    def analyze_url(self):
-        """Analyze URL and populate file list"""
-        url = self.url_var.get().strip()
+        # File list with fixed height to prevent excessive expansion
+        self.file_list.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('md')))
         
-        if not url:
-            messagebox.showerror("Error", "Por favor ingresa una URL")
-            return
+        self.download_controls.pack(fill=tk.X, 
+                                   pady=(0, ModernStyles.get_spacing('md')))
+        
+        self.progress.pack(fill=tk.X, pady=(0, ModernStyles.get_spacing('lg')))
+        
+        # Force canvas to update scroll region after layout
+        self.root.after(100, self._update_scroll_region)
+    
+    def _update_scroll_region(self):
+        """Update the scroll region to encompass all widgets"""
+        self.canvas.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+    
+    def _setup_bindings(self):
+        """Setup event bindings"""
+        # Window close event
+        self.root.protocol("WM_DELETE_WINDOW", self._on_window_closing)
+        
+        # Keyboard shortcuts
+        self.root.bind('<Control-o>', lambda e: self.url_input.url_entry.focus())
+        self.root.bind('<Control-d>', lambda e: self._on_download_started(
+            self.download_controls.get_download_path()) if not self.is_downloading else None)
+        self.root.bind('<F5>', lambda e: self._refresh_file_list())
+        self.root.bind('<Escape>', lambda e: self._on_download_cancelled() if self.is_downloading else None)
+    
+    def _on_url_analysis(self, url: str):
+        """Handle URL analysis completion"""
+        try:
+            # Configure downloader based on file type selections
+            selected_types = self.file_types.get_selected_types()
+            self.downloader.configure_downloads(
+                videos=selected_types.get('videos', False),
+                subtitles=selected_types.get('subtitles', False),
+                images=selected_types.get('images', False),
+                info=selected_types.get('info', False)
+            )
             
-        if not URLUtils.is_valid_url(url):
-            messagebox.showerror("Error", "URL inválida. Debe comenzar con http:// o https://")
-            return
-        
-        # Clear current file list
-        for item in self.files_tree.get_children():
-            self.files_tree.delete(item)
-        
-        self.status_var.set("Analizando URL...")
-        self.analyze_btn.config(state=tk.DISABLED)
-        
-        # Run analysis in separate thread
-        def analyze_thread():
-            try:
-                # Configure downloader
-                self.downloader.configure_downloads(
-                    videos=self.videos_var.get(),
-                    subtitles=self.subtitles_var.get(),
-                    images=self.images_var.get(),
-                    info=self.info_var.get()
-                )
-                
-                files = self.downloader.get_file_list(url)
-                
-                # Update UI in main thread
-                self.root.after(0, self.populate_file_list, files)
-                
-            except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror("Error", f"Error al analizar URL: {e}"))
-                self.root.after(0, lambda: self.status_var.set("Error al analizar"))
-                self.root.after(0, lambda: self.analyze_btn.config(state=tk.NORMAL))
-        
-        threading.Thread(target=analyze_thread, daemon=True).start()
-    
-    def populate_file_list(self, files):
-        """Populate the file list treeview"""
-        self.analyze_btn.config(state=tk.NORMAL)
-        
-        if not files:
-            self.status_var.set("No se encontraron archivos")
-            self.download_btn.config(state=tk.DISABLED)
-            return
-        
-        # Populate treeview
-        for filename, file_url, file_type in files:
-            # Get file info (this could be optimized to run in background)
-            file_info = self.downloader.get_file_info(file_url)
-            size_formatted = file_info.get('size_formatted', 'Desconocido')
+            # Get file list
+            files = self.downloader.get_file_list(url)
             
-            # Insert into treeview
-            self.files_tree.insert('', tk.END, values=(filename, file_type.title(), size_formatted))
-        
-        self.status_var.set(f"Encontrados {len(files)} archivos")
-        self.download_btn.config(state=tk.NORMAL)
-        
-        # Update download path suggestion
-        folder_name = URLUtils.extract_folder_name(self.url_var.get())
-        suggested_path = Path("./descarga") / folder_name
-        self.download_path_var.set(str(suggested_path))
+            # Update file list component
+            self.file_list.set_files(files)
+            
+            # Enable download if files found
+            if files:
+                self.download_controls.enable_download(True)
+                self.url_input.set_status(f"✅ Encontrados {len(files)} archivos", 'success')
+            else:
+                self.download_controls.enable_download(False)
+                self.url_input.set_status("⚠️ No se encontraron archivos del tipo seleccionado", 'warning')
+            
+        except Exception as e:
+            # Handle analysis error
+            self.file_list.clear_files()
+            self.download_controls.enable_download(False)
+            self.url_input.set_status(f"❌ Error: {str(e)}", 'error')
+            messagebox.showerror("Error de análisis", f"Error al analizar URL:\n{e}")
     
-    def select_download_path(self):
-        """Select download directory"""
-        path = filedialog.askdirectory(initialdir=self.download_path_var.get())
-        if path:
-            self.download_path_var.set(path)
+    def _on_file_type_changed(self, selected_types):
+        """Handle file type selection changes"""
+        # Re-analyze if URL is present
+        url = self.url_input.get_url()
+        if url and URLUtils.is_valid_url(url):
+            # Trigger re-analysis with new file types
+            self._on_url_analysis(url)
     
-    def start_download(self):
-        """Start the download process"""
+    def _on_download_started(self, download_path: str):
+        """Handle download start"""
         if self.is_downloading:
             return
         
-        url = self.url_var.get().strip()
-        download_path = Path(self.download_path_var.get())
-        
-        if not url:
-            messagebox.showerror("Error", "No hay URL para descargar")
+        # Validate we have files to download
+        if self.file_list.get_file_count() == 0:
+            messagebox.showwarning("Sin archivos", "No hay archivos para descargar. Analiza una URL primero.")
             return
         
-        # Update UI state
+        # Validate file type selection
+        if not self.file_types.has_selection():
+            messagebox.showwarning("Sin selección", "Selecciona al menos un tipo de archivo para descargar.")
+            return
+        
+        # Start download in background thread
         self.is_downloading = True
-        self.download_btn.config(state=tk.DISABLED)
-        self.cancel_btn.config(state=tk.NORMAL)
-        self.analyze_btn.config(state=tk.DISABLED)
+        self._update_ui_for_download_state(True)
         
-        # Configure downloader
-        self.downloader.configure_downloads(
-            videos=self.videos_var.get(),
-            subtitles=self.subtitles_var.get(),
-            images=self.images_var.get(),
-            info=self.info_var.get()
+        self.download_thread = threading.Thread(
+            target=self._download_worker,
+            args=(download_path,),
+            daemon=True
         )
-        
-        # Start download thread
-        def download_thread():
-            try:
-                def progress_callback(downloaded, total, filename):
-                    if total > 0:
-                        percent = (downloaded / total) * 100
-                        self.root.after(0, lambda: self.progress_var.set(percent))
-                        self.root.after(0, lambda: self.status_var.set(f"Descargando: {filename[:40]}..."))
-                
-                result = self.downloader.download_from_url(
-                    url, 
-                    download_path=download_path,
-                    progress_callback=progress_callback
-                )
-                
-                # Update UI with results
-                self.root.after(0, self.download_completed, result)
-                
-            except Exception as e:
-                error_result = {
-                    'success': False,
-                    'message': f'Error: {e}',
-                    'completed': 0,
-                    'failed': [str(e)],
-                    'total': 0
-                }
-                self.root.after(0, self.download_completed, error_result)
-        
-        self.download_thread = threading.Thread(target=download_thread, daemon=True)
         self.download_thread.start()
     
-    def download_completed(self, result):
+    def _download_worker(self, download_path: str):
+        """Background download worker"""
+        try:
+            # Setup progress callback
+            def progress_callback(downloaded, total, filename):
+                # Update UI in main thread
+                progress_percent = (downloaded / total * 100) if total > 0 else 0
+                
+                self.root.after(0, lambda: self.progress.set_progress(progress_percent))
+                self.root.after(0, lambda: self.progress.set_current_file(filename))
+                self.root.after(0, lambda: self.progress.update_stats(
+                    downloaded=downloaded, 
+                    total=total
+                ))
+                self.root.after(0, lambda: self.progress.set_status(
+                    f"Descargando... ({downloaded}/{total})", 'downloading'))
+            
+            # Start download
+            url = self.url_input.get_url()
+            result = self.downloader.download_files(url, download_path, progress_callback)
+            
+            # Handle completion in main thread
+            self.root.after(0, lambda: self._download_completed(result))
+            
+        except Exception as e:
+            # Handle error in main thread
+            self.root.after(0, lambda: self._download_error(str(e)))
+    
+    def _download_completed(self, result):
         """Handle download completion"""
         self.is_downloading = False
-        self.download_btn.config(state=tk.NORMAL)
-        self.cancel_btn.config(state=tk.DISABLED)
-        self.analyze_btn.config(state=tk.NORMAL)
-        self.progress_var.set(0)
+        self._update_ui_for_download_state(False)
         
-        if result['success']:
-            self.status_var.set(f"✅ Descarga completada: {result['completed']} archivos")
-            messagebox.showinfo("Completado", 
-                               f"Descarga completada exitosamente!\n"
-                               f"Archivos descargados: {result['completed']}")
+        # Update progress
+        self.progress.animate_success()
+        
+        # Show completion message
+        downloaded = result.get('downloaded', 0)
+        failed = result.get('failed', 0)
+        
+        if failed == 0:
+            message = f"🎉 ¡Descarga completada!\n\nArchivos descargados: {downloaded}"
+            messagebox.showinfo("Descarga completada", message)
         else:
-            self.status_var.set(f"❌ Error en descarga")
-            messagebox.showerror("Error", result['message'])
+            message = f"⚠️ Descarga completada con errores\n\nDescargados: {downloaded}\nFallidos: {failed}"
+            messagebox.showwarning("Descarga con errores", message)
     
-    def cancel_download(self):
-        """Cancel ongoing download"""
-        if self.is_downloading and self.download_thread:
-            # Note: This is a simple cancellation. For a more robust solution,
-            # you'd need to implement proper cancellation in the download logic
+    def _download_error(self, error_msg: str):
+        """Handle download error"""
+        self.is_downloading = False
+        self._update_ui_for_download_state(False)
+        
+        # Update progress
+        self.progress.show_error(error_msg)
+        
+        # Show error message
+        messagebox.showerror("Error de descarga", f"Error durante la descarga:\n{error_msg}")
+    
+    def _on_download_cancelled(self):
+        """Handle download cancellation"""
+        if not self.is_downloading:
+            return
+        
+        # Ask for confirmation
+        if messagebox.askyesno("Cancelar descarga", "¿Estás seguro de que quieres cancelar la descarga?"):
+            # Note: The actual cancellation would need to be implemented in the downloader
             self.is_downloading = False
-            self.status_var.set("Descarga cancelada")
-            self.download_btn.config(state=tk.NORMAL)
-            self.cancel_btn.config(state=tk.DISABLED)
-            self.analyze_btn.config(state=tk.NORMAL)
-            self.progress_var.set(0)
+            self._update_ui_for_download_state(False)
+            
+            # Update progress
+            self.progress.set_status("❌ Descarga cancelada", 'cancelled')
+            
+            messagebox.showinfo("Cancelado", "Descarga cancelada por el usuario")
     
-    def show_about(self):
-        """Show about dialog"""
-        about_text = """🎬 UCVL Downloader
-
-Un descargador de videos y subtítulos para visuales.ucv.cu
-
-Características:
-• Descarga de videos y subtítulos
-• Interfaz gráfica y de línea de comandos
-• Progreso en tiempo real
-• Configuración de tipos de archivo
-
-Versión: 1.0.0
-"""
-        messagebox.showinfo("Acerca de", about_text)
+    def _update_ui_for_download_state(self, downloading: bool):
+        """Update UI state for downloading"""
+        # Update download controls
+        self.download_controls.set_download_state(downloading)
+        
+        # Update progress
+        if downloading:
+            self.progress.set_status("Iniciando descarga...", 'downloading')
+            self.progress.set_progress(0)
+        else:
+            if not self.is_downloading:  # Only reset if not actually downloading
+                self.progress.reset_progress()
+    
+    def _refresh_file_list(self):
+        """Refresh file list"""
+        url = self.url_input.get_url()
+        if url and URLUtils.is_valid_url(url):
+            self._on_url_analysis(url)
+    
+    def _on_window_closing(self):
+        """Handle window closing"""
+        if self.is_downloading:
+            if messagebox.askyesno("Cerrar aplicación", 
+                                 "Hay una descarga en progreso. ¿Quieres cerrar la aplicación?"):
+                self.is_downloading = False
+                self.root.destroy()
+        else:
+            self.root.destroy()
     
     def run(self):
-        """Start the GUI"""
-        # Center window
-        self.root.update_idletasks()
-        x = (self.root.winfo_screenwidth() // 2) - (self.root.winfo_width() // 2)
-        y = (self.root.winfo_screenheight() // 2) - (self.root.winfo_height() // 2)
-        self.root.geometry(f"+{x}+{y}")
-        
-        # Start main loop
-        self.root.mainloop()
+        """Run the GUI application"""
+        try:
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            print("Aplicación interrumpida por el usuario")
+        except Exception as e:
+            print(f"Error inesperado: {e}")
+            messagebox.showerror("Error", f"Error inesperado: {e}")
+        finally:
+            if self.root:
+                self.root.destroy()
 
 
 def main():
-    """Entry point for GUI interface"""
+    """Main entry point for GUI"""
     try:
-        gui = GUIInterface()
-        gui.run()
+        app = ModernGUIInterface()
+        app.run()
+    except ImportError as e:
+        if 'tkinter' in str(e):
+            print("❌ Error: tkinter no está disponible")
+            print("En Ubuntu/Debian, instala: sudo apt install python3-tk")
+            print("En otros sistemas, consulta la documentación de Python")
+        else:
+            print(f"❌ Error de importación: {e}")
+        return False
     except Exception as e:
-        print(f"Error starting GUI: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Error al inicializar la interfaz gráfica: {e}")
+        return False
+    
+    return True
 
 
 if __name__ == "__main__":

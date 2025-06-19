@@ -1,5 +1,5 @@
 """
-Main downloader class for UCVL Downloader
+Main downloader class for UCLV Downloader
 """
 
 import time
@@ -39,7 +39,7 @@ class DownloadProgress:
             callback(self)
 
 
-class UCVLDownloader:
+class UCLVDownloader:
     """Main downloader class with improved modularity and features"""
     
     def __init__(self, download_delay: float = 0.5, max_retries: int = 3):

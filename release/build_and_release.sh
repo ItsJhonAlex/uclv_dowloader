@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# UCVL Downloader - Script de Build y Release Automático
+# UCLV Downloader - Script de Build y Release Automático
 # Este script compila el proyecto y crea los paquetes de distribución
 
 set -e  # Salir si hay algún error
 
-echo "🚀 UCVL Downloader - Build y Release Automático"
+echo "🚀 UCLV Downloader - Build y Release Automático"
 echo "==============================================="
 
 # Colores para output

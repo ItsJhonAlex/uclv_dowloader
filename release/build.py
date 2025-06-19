@@ -1,5 +1,5 @@
 """
-Build script para generar ejecutable standalone de UCVL Downloader
+Build script para generar ejecutable standalone de UCLV Downloader
 """
 
 import os
@@ -140,7 +140,7 @@ def test_executable():
 
 def create_installation_info():
     """Crea información de instalación"""
-    install_info = """# UCVL Downloader - Ejecutable Linux
+    install_info = """# UCLV Downloader - Ejecutable Linux
 
 ## 📦 Instalación
 
@@ -205,7 +205,7 @@ Para reportar bugs o solicitar nuevas funcionalidades, abre un issue en el repos
 
 def main():
     """Función principal del script de build"""
-    print("🏗️  UCVL Downloader - Script de Compilación")
+    print("🏗️  UCLV Downloader - Script de Compilación")
     print("=" * 50)
     
     # Cambiar al directorio raíz del proyecto

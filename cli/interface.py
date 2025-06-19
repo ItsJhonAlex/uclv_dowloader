@@ -1,23 +1,23 @@
 """
-CLI Interface for UCVL Downloader
+CLI Interface for UCLV Downloader
 """
 
 import sys
 from pathlib import Path
 from typing import Optional
 
-from core import UCVLDownloader, URLUtils, FileUtils
+from core import UCLVDownloader, URLUtils, FileUtils
 
 
 class CLIInterface:
-    """Command Line Interface for UCVL Downloader"""
+    """Command Line Interface for UCLV Downloader"""
     
     def __init__(self):
-        self.downloader = UCVLDownloader()
+        self.downloader = UCLVDownloader()
         
     def print_banner(self):
         """Print application banner"""
-        print("🎬 UCVL Downloader - Descargador de Videos y Subtítulos")
+        print("🎬 UCLV Downloader - Descargador de Videos y Subtítulos")
         print("=" * 60)
         
     def get_url_from_user(self) -> str:
@@ -180,7 +180,7 @@ class CLIInterface:
         except Exception as e:
             print(f"\n❌ Error inesperado: {e}")
         finally:
-            print("\n🎯 ¡Gracias por usar UCVL Downloader!")
+            print("\n🎯 ¡Gracias por usar UCLV Downloader!")
 
 
 def main():
