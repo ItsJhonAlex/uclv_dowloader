@@ -18,7 +18,7 @@ from .file_list import FileListComponent
 from .download_controls import DownloadControlsComponent
 from .progress import ProgressComponent
 from .subtitle_search import SubtitleSearchComponent
-from .styles import ModernStyles
+from .styling import ModernStyles
 
 __all__ = [
     'HeaderComponent',
